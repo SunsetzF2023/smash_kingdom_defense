@@ -140,6 +140,16 @@ class GameScene extends Phaser.Scene {
 
     createWalls() {
         const wallThickness = 10;
+        
+        // 创建墙壁的视觉效果
+        const wallGraphics = this.add.graphics();
+        wallGraphics.fillStyle(0x2c3e50);
+        wallGraphics
+            .fillRect(0, 0, wallThickness, this.gameHeight)                    // 左墙
+            .fillRect(this.gameWidth - wallThickness, 0, wallThickness, this.gameHeight)  // 右墙
+            .fillRect(0, 0, this.gameWidth, wallThickness);                    // 顶部墙
+        
+        // 创建物理墙壁
         const walls = [
             // 左墙
             Bodies.rectangle(wallThickness/2, this.gameHeight/2, wallThickness, this.gameHeight, { 
@@ -160,12 +170,7 @@ class GameScene extends Phaser.Scene {
         
         World.add(this.world, walls);
         
-        // 在 Phaser 中创建墙壁视觉效果
-        this.add.graphics()
-            .fillStyle(0x2c3e50)
-            .fillRect(0, 0, 10, this.gameHeight)                    // 左墙
-            .fillRect(this.gameWidth - 10, 0, 10, this.gameHeight)  // 右墙
-            .fillRect(0, 0, this.gameWidth, 10);                    // 顶部墙
+        this.walls = walls;
     }
 
     createPortal() {
@@ -809,7 +814,7 @@ const config = {
     width: 800,
     height: 900,
     parent: 'game',
-    backgroundColor: '#000000',
+    backgroundColor: '#252526',
     physics: {
         default: 'arcade',
         arcade: {
