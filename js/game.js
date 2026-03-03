@@ -1,4 +1,4 @@
-// Smash Kingdom: Action Defense - Matter.js 版本
+// Smash Kingdom: Action Defense - 佣兵系统版本
 // 手机竖屏弹珠策略防御游戏
 
 // Matter.js 引擎模块
@@ -20,33 +20,43 @@ class GameScene extends Phaser.Scene {
             score: 0,
             castleHealth: 100,
             maxCastleHealth: 100,
-            marbleCount: 20,
             level: 1,
-            isGameOver: false
+            isGameOver: false,
+            selectedSoldierType: 'archer',
+            soldierCosts: {
+                archer: 10,
+                tank: 20,
+                assassin: 15,
+                healer: 25,
+                mage: 30
+            }
         };
         
         // Matter.js 相关
         this.engine = null;
-        this.render = null;
         this.world = null;
         
         // 游戏对象
         this.king = null;          // 国王（发射点）
         this.portal = null;        // 传送门
         this.castle = null;        // 城墙
-        this.marbles = [];         // 弹珠数组
+        this.soldiers = [];        // 佣兵数组
         this.enemies = [];         // 敌人数组
         
         // 弹弓状态
         this.slingshotState = {
             isDragging: false,
-            startPos: { x: 200, y: 600 },
-            currentPos: { x: 200, y: 600 },
+            startPos: { x: 0, y: 0 },
+            currentPos: { x: 0, y: 0 },
             maxDistance: 100
         };
         
         // UI 元素
         this.uiElements = {};
+        
+        // 游戏配置
+        this.gameWidth = 0;
+        this.gameHeight = 0;
     }
 
     preload() {
@@ -61,8 +71,13 @@ class GameScene extends Phaser.Scene {
             loadingElement.style.display = 'none';
         }
 
+        // 获取游戏容器尺寸
+        const container = document.getElementById('game-container');
+        this.gameWidth = container.clientWidth;
+        this.gameHeight = container.clientHeight;
+        
         // 设置游戏画布尺寸
-        this.cameras.main.setSize(400, 700);
+        this.cameras.main.setSize(this.gameWidth, this.gameHeight);
         
         // 初始化 Matter.js
         this.initMatterJS();
@@ -79,7 +94,7 @@ class GameScene extends Phaser.Scene {
         // 开始游戏循环
         this.startGameLoops();
         
-        console.log('Game initialized with Matter.js!');
+        console.log('Game initialized with soldier system!');
     }
 
     initMatterJS() {
@@ -89,9 +104,6 @@ class GameScene extends Phaser.Scene {
         
         // 设置重力
         this.engine.world.gravity.y = 1;
-        
-        // 创建 Matter.js 渲染器（用于调试，可选）
-        // this.createMatterRenderer();
     }
 
     createGameWorld() {
@@ -109,23 +121,26 @@ class GameScene extends Phaser.Scene {
         
         // 创建瞄准线
         this.createAimLine();
+        
+        // 创建佣兵选择面板
+        this.createSoldierPanel();
     }
 
     createWalls() {
         const wallThickness = 10;
         const walls = [
             // 左墙
-            Bodies.rectangle(wallThickness/2, 350, wallThickness, 700, { 
+            Bodies.rectangle(wallThickness/2, this.gameHeight/2, wallThickness, this.gameHeight, { 
                 isStatic: true,
                 render: { fillStyle: '#2c3e50' }
             }),
             // 右墙
-            Bodies.rectangle(400 - wallThickness/2, 350, wallThickness, 700, { 
+            Bodies.rectangle(this.gameWidth - wallThickness/2, this.gameHeight/2, wallThickness, this.gameHeight, { 
                 isStatic: true,
                 render: { fillStyle: '#2c3e50' }
             }),
             // 顶部墙（留出传送门位置）
-            Bodies.rectangle(200, wallThickness/2, 400, wallThickness, { 
+            Bodies.rectangle(this.gameWidth/2, wallThickness/2, this.gameWidth, wallThickness, { 
                 isStatic: true,
                 render: { fillStyle: '#2c3e50' }
             })
@@ -136,14 +151,14 @@ class GameScene extends Phaser.Scene {
         // 在 Phaser 中创建墙壁视觉效果
         this.add.graphics()
             .fillStyle(0x2c3e50)
-            .fillRect(0, 0, 10, 700)                    // 左墙
-            .fillRect(390, 0, 10, 700)                  // 右墙
-            .fillRect(0, 0, 400, 10);                    // 顶部墙
+            .fillRect(0, 0, 10, this.gameHeight)                    // 左墙
+            .fillRect(this.gameWidth - 10, 0, 10, this.gameHeight)  // 右墙
+            .fillRect(0, 0, this.gameWidth, 10);                    // 顶部墙
     }
 
     createPortal() {
         // 传送门位置（顶部中央）
-        const portalX = 200;
+        const portalX = this.gameWidth / 2;
         const portalY = 80;
         
         // 创建传送门视觉效果
@@ -175,29 +190,31 @@ class GameScene extends Phaser.Scene {
 
     createCastle() {
         // 城墙位置（底部）
-        const castleY = 650;
+        const castleY = this.gameHeight - 50;
+        const castleWidth = this.gameWidth * 0.8;
+        const castleX = (this.gameWidth - castleWidth) / 2;
         
         // 创建城墙视觉效果
         const castleGraphics = this.add.graphics();
         
         // 城墙主体
         castleGraphics.fillStyle(0x8B4513);
-        castleGraphics.fillRect(50, castleY, 300, 40);
+        castleGraphics.fillRect(castleX, castleY, castleWidth, 40);
         
         // 城墙装饰
         castleGraphics.fillStyle(0x654321);
-        for (let i = 0; i < 6; i++) {
-            castleGraphics.fillRect(60 + i * 50, castleY - 10, 30, 10);
+        for (let i = 0; i < Math.floor(castleWidth / 50); i++) {
+            castleGraphics.fillRect(castleX + 10 + i * 50, castleY - 10, 30, 10);
         }
         
         // 城墙血量条背景
         castleGraphics.fillStyle(0x333333);
-        castleGraphics.fillRect(100, castleY - 25, 200, 8);
+        castleGraphics.fillRect(castleX + 50, castleY - 25, castleWidth - 100, 8);
         
         this.castle = { 
-            x: 200, 
+            x: this.gameWidth / 2, 
             y: castleY, 
-            width: 300, 
+            width: castleWidth, 
             height: 40,
             graphics: castleGraphics 
         };
@@ -205,28 +222,21 @@ class GameScene extends Phaser.Scene {
 
     createKing() {
         // 国王位置（底部中央）
-        const kingX = 200;
-        const kingY = 600;
+        const kingX = this.gameWidth / 2;
+        const kingY = this.gameHeight - 120;
         
-        // 创建国王视觉效果
+        // 创建国王视觉效果（蓝色方块作为占位符）
         const kingGraphics = this.add.graphics();
-        
-        // 国王身体
-        kingGraphics.fillStyle(0xFFD700);
-        kingGraphics.fillCircle(kingX, kingY, 20);
+        kingGraphics.fillStyle(0x0000FF);
+        kingGraphics.fillRect(kingX - 20, kingY - 20, 40, 40);
         
         // 国王皇冠
-        kingGraphics.fillStyle(0xFF6B6B);
+        kingGraphics.fillStyle(0xFFD700);
         kingGraphics.fillTriangle(
-            kingX - 15, kingY - 20,
-            kingX, kingY - 35,
-            kingX + 15, kingY - 20
+            kingX - 15, kingY - 25,
+            kingX, kingY - 40,
+            kingX + 15, kingY - 25
         );
-        
-        // 国王眼睛
-        kingGraphics.fillStyle(0x000000);
-        kingGraphics.fillCircle(kingX - 8, kingY - 5, 3);
-        kingGraphics.fillCircle(kingX + 8, kingY - 5, 3);
         
         this.king = { 
             x: kingX, 
@@ -238,17 +248,99 @@ class GameScene extends Phaser.Scene {
         this.slingshotState.startPos = { x: kingX, y: kingY };
     }
 
+    createSoldierPanel() {
+        const panelY = this.gameHeight - 180;
+        const buttonWidth = 60;
+        const buttonHeight = 60;
+        const spacing = 10;
+        const totalWidth = 5 * buttonWidth + 4 * spacing;
+        const startX = (this.gameWidth - totalWidth) / 2;
+        
+        const soldierTypes = [
+            { type: 'archer', color: 0x00FF00, name: '弓' },
+            { type: 'tank', color: 0x0000FF, name: '重' },
+            { type: 'assassin', color: 0xFF00FF, name: '刺' },
+            { type: 'healer', color: 0xFFFFFF, name: '疗' },
+            { type: 'mage', color: 0xFF4500, name: '法' }
+        ];
+        
+        soldierTypes.forEach((soldier, index) => {
+            const x = startX + index * (buttonWidth + spacing);
+            
+            // 按钮背景
+            const button = this.add.graphics();
+            button.fillStyle(soldier.color, 0.8);
+            button.fillRoundedRect(x, panelY, buttonWidth, buttonHeight, 10);
+            button.setInteractive(new Phaser.Geom.Rectangle(x, panelY, buttonWidth, buttonHeight), Phaser.Geom.Rectangle.Contains);
+            
+            // 按钮文字
+            const text = this.add.text(x + buttonWidth/2, panelY + buttonHeight/2, soldier.name, {
+                fontSize: '16px',
+                fill: '#000000',
+                stroke: '#FFFFFF',
+                strokeThickness: 1
+            }).setOrigin(0.5);
+            
+            // 成本文字
+            const cost = this.gameState.soldierCosts[soldier.type];
+            const costText = this.add.text(x + buttonWidth/2, panelY + buttonHeight - 8, `${cost}`, {
+                fontSize: '10px',
+                fill: '#FFFF00',
+                stroke: '#000000',
+                strokeThickness: 1
+            }).setOrigin(0.5);
+            
+            // 点击事件
+            button.on('pointerdown', () => {
+                this.selectSoldierType(soldier.type);
+            });
+            
+            // 保存按钮引用
+            if (!this.soldierButtons) this.soldierButtons = [];
+            this.soldierButtons.push({
+                type: soldier.type,
+                button: button,
+                text: text,
+                costText: costText,
+                graphics: button
+            });
+        });
+        
+        // 默认选中弓箭手
+        this.selectSoldierType('archer');
+    }
+
+    selectSoldierType(type) {
+        this.gameState.selectedSoldierType = type;
+        
+        // 更新按钮视觉效果
+        this.soldierButtons.forEach(btn => {
+            if (btn.type === type) {
+                btn.graphics.setAlpha(1);
+                btn.graphics.lineStyle(3, 0xFFFF00);
+                btn.graphics.strokeRoundedRect(
+                    btn.button.x, 
+                    btn.button.y, 
+                    60, 60, 10
+                );
+            } else {
+                btn.graphics.setAlpha(0.8);
+                btn.graphics.lineStyle(0);
+            }
+        });
+    }
+
     createAimLine() {
         this.aimLine = this.add.graphics();
         this.aimLine.setDepth(100);
     }
 
     createPlaceholderGraphics() {
-        // 弹珠图形
+        // 弹珠图形（佣兵）
         this.add.graphics()
-            .fillStyle(0xFF6B6B)
+            .fillStyle(0x00FF00)
             .fillCircle(15, 15, 12)
-            .generateTexture('marble', 30, 30);
+            .generateTexture('soldier', 30, 30);
         
         // 敌人图形
         this.add.graphics()
@@ -274,21 +366,21 @@ class GameScene extends Phaser.Scene {
             strokeThickness: 2
         });
         
-        // 弹珠数量
-        this.uiElements.marbleText = this.add.text(10, 70, `Marbles: ${this.gameState.marbleCount}`, {
-            fontSize: '18px',
-            fill: '#FFFFFF',
-            stroke: '#000000',
-            strokeThickness: 2
-        });
-        
         // 城墙血量
-        this.uiElements.healthText = this.add.text(200, 20, `HP: ${this.gameState.castleHealth}/${this.gameState.maxCastleHealth}`, {
+        this.uiElements.healthText = this.add.text(this.gameWidth - 150, 20, `HP: ${this.gameState.castleHealth}/${this.gameState.maxCastleHealth}`, {
             fontSize: '18px',
             fill: '#00FF00',
             stroke: '#000000',
             strokeThickness: 2
         });
+        
+        // 当前选中的佣兵类型
+        this.uiElements.selectedText = this.add.text(this.gameWidth/2, 20, `选中: 弓箭手`, {
+            fontSize: '16px',
+            fill: '#FFFF00',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
         
         this.updateHealthBar();
     }
@@ -309,7 +401,7 @@ class GameScene extends Phaser.Scene {
             this.king.x, this.king.y
         );
         
-        if (distance < 50 && this.gameState.marbleCount > 0) {
+        if (distance < 50) {
             this.slingshotState.isDragging = true;
             this.slingshotState.currentPos = { x: pointer.x, y: pointer.y };
         }
@@ -341,10 +433,8 @@ class GameScene extends Phaser.Scene {
     }
 
     handlePointerUp(pointer) {
-        if (this.slingshotState.isDragging && this.gameState.marbleCount > 0) {
-            this.fireMarble();
-            this.gameState.marbleCount--;
-            this.updateUI();
+        if (this.slingshotState.isDragging) {
+            this.fireSoldier();
         }
         
         this.slingshotState.isDragging = false;
@@ -389,7 +479,7 @@ class GameScene extends Phaser.Scene {
                 this.aimLine.lineTo(x, y);
             }
             
-            if (y > 700) break;
+            if (y > this.gameHeight) break;
         }
         
         this.aimLine.strokePath();
@@ -406,82 +496,66 @@ class GameScene extends Phaser.Scene {
         this.aimLine.fillCircle(this.slingshotState.currentPos.x, this.slingshotState.currentPos.y, 8);
     }
 
-    fireMarble() {
+    fireSoldier() {
+        const soldierType = this.gameState.selectedSoldierType;
+        const cost = this.gameState.soldierCosts[soldierType];
+        
+        // 检查资源（这里简化为无限资源）
+        // if (this.gameState.resources < cost) return;
+        
         const dx = this.king.x - this.slingshotState.currentPos.x;
         const dy = this.king.y - this.slingshotState.currentPos.y;
         
-        // 创建 Matter.js 弹珠
-        const marble = Bodies.circle(
+        // 创建佣兵
+        const soldier = new Soldier(
+            this,
             this.slingshotState.currentPos.x,
             this.slingshotState.currentPos.y,
-            12,
-            {
-                restitution: 0.8,
-                friction: 0.1,
-                density: 0.001,
-                render: { fillStyle: '#FF6B6B' }
-            }
+            soldierType
         );
         
         // 设置速度
-        Body.setVelocity(marble, {
+        Body.setVelocity(soldier.body, {
             x: dx * 0.3,
             y: dy * 0.3
         });
         
-        World.add(this.world, marble);
+        this.soldiers.push(soldier);
         
-        // 创建 Phaser 视觉效果
-        const marbleSprite = this.add.sprite(
-            this.slingshotState.currentPos.x,
-            this.slingshotState.currentPos.y,
-            'marble'
-        );
-        
-        this.marbles.push({
-            body: marble,
-            sprite: marbleSprite,
-            damage: 25
-        });
-        
-        // 发射音效（如果有的话）
+        // 发射特效
         this.createFireEffect(this.slingshotState.currentPos.x, this.slingshotState.currentPos.y);
     }
 
     spawnEnemy() {
         if (this.gameState.isGameOver) return;
         
-        // 创建 Matter.js 敌人
-        const enemy = Bodies.rectangle(
-            this.portal.x + (Math.random() - 0.5) * 40,
+        // 随机选择敌人类型
+        const enemyTypes = ['basic', 'elite', 'fast', 'tank'];
+        const weights = [60, 20, 15, 5]; // 权重
+        const type = this.weightedRandom(enemyTypes, weights);
+        
+        // 创建敌人
+        const enemy = new Enemy(
+            this,
+            this.portal.x + (Math.random() - 0.5) * 60,
             this.portal.y,
-            25,
-            25,
-            {
-                restitution: 0.2,
-                friction: 0.3,
-                density: 0.002,
-                render: { fillStyle: '#FF0000' }
-            }
+            type
         );
         
-        // 设置向下移动的速度
-        Body.setVelocity(enemy, {
-            x: (Math.random() - 0.5) * 2,
-            y: 1 + Math.random()
-        });
+        this.enemies.push(enemy);
+    }
+    
+    weightedRandom(items, weights) {
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+        let random = Math.random() * totalWeight;
         
-        World.add(this.world, enemy);
-        
-        // 创建 Phaser 视觉效果
-        const enemySprite = this.add.sprite(enemy.position.x, enemy.position.y, 'enemy');
-        
-        this.enemies.push({
-            body: enemy,
-            sprite: enemySprite,
-            health: 50,
-            damage: 10
-        });
+        for (let i = 0; i < items.length; i++) {
+            random -= weights[i];
+            if (random <= 0) {
+                return items[i];
+            }
+        }
+        return items[0];
     }
 
     handleCollision(event) {
@@ -490,63 +564,35 @@ class GameScene extends Phaser.Scene {
         pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
             
-            // 检查弹珠与敌人的碰撞
-            this.marbles.forEach((marble, marbleIndex) => {
-                if (marble.body === bodyA || marble.body === bodyB) {
+            // 检查佣兵与敌人的碰撞
+            this.soldiers.forEach((soldier, soldierIndex) => {
+                if (soldier.body === bodyA || soldier.body === bodyB) {
                     this.enemies.forEach((enemy, enemyIndex) => {
                         if (enemy.body === bodyA || enemy.body === bodyB) {
-                            this.handleMarbleEnemyCollision(marble, enemy, marbleIndex, enemyIndex);
+                            this.handleSoldierEnemyCollision(soldier, enemy);
                         }
                     });
+                    
+                    // 佣兵碰撞反弹
+                    soldier.onCollision();
                 }
             });
             
             // 检查敌人与城墙的碰撞
             this.enemies.forEach((enemy, index) => {
                 if (enemy.body === bodyA || enemy.body === bodyB) {
-                    if (enemy.body.position.y > this.castle.y - 20) {
-                        this.handleEnemyCastleCollision(enemy, index);
+                    if (enemy.y > this.castle.y - 20) {
+                        enemy.attackCastle();
                     }
                 }
             });
         });
     }
 
-    handleMarbleEnemyCollision(marble, enemy, marbleIndex, enemyIndex) {
-        enemy.health -= marble.damage;
-        
-        // 创建碰撞特效
-        this.createCollisionEffect(enemy.body.position.x, enemy.body.position.y);
-        
-        if (enemy.health <= 0) {
-            // 移除敌人
-            World.remove(this.world, enemy.body);
-            enemy.sprite.destroy();
-            this.enemies.splice(enemyIndex, 1);
-            
-            // 增加分数
-            this.gameState.score += 100;
-            this.updateUI();
-        }
-    }
-
-    handleEnemyCastleCollision(enemy, index) {
-        // 城墙受到伤害
-        this.gameState.castleHealth -= enemy.damage;
-        this.updateUI();
-        this.updateHealthBar();
-        
-        // 移除敌人
-        World.remove(this.world, enemy.body);
-        enemy.sprite.destroy();
-        this.enemies.splice(index, 1);
-        
-        // 创建城墙受击特效
-        this.createCastleHitEffect();
-        
-        // 检查游戏结束
-        if (this.gameState.castleHealth <= 0) {
-            this.gameOver();
+    handleSoldierEnemyCollision(soldier, enemy) {
+        // 发射状态下的碰撞伤害
+        if (soldier.state === 'launching') {
+            enemy.takeDamage(soldier.damage);
         }
     }
 
@@ -567,45 +613,14 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    createCollisionEffect(x, y) {
-        const effect = this.add.graphics();
-        effect.fillStyle(0xFF00FF, 0.8);
-        effect.fillCircle(x, y, 15);
-        
-        this.tweens.add({
-            targets: effect,
-            scaleX: 2,
-            scaleY: 2,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-                effect.destroy();
-            }
-        });
-    }
-
-    createCastleHitEffect() {
-        const originalColor = this.castle.graphics.fillStyle;
-        
-        this.castle.graphics.fillStyle(0xFF0000, 0.5);
-        this.castle.graphics.fillRect(50, this.castle.y, 300, 40);
-        
-        this.time.delayedCall(100, () => {
-            this.castle.graphics.clear();
-            // 重新绘制城墙
-            this.castle.graphics.fillStyle(0x8B4513);
-            this.castle.graphics.fillRect(50, this.castle.y, 300, 40);
-            this.castle.graphics.fillStyle(0x654321);
-            for (let i = 0; i < 6; i++) {
-                this.castle.graphics.fillRect(60 + i * 50, this.castle.y - 10, 30, 10);
-            }
-        });
-    }
-
     updateHealthBar() {
         // 清除旧的血量条
         this.castle.graphics.fillStyle(0x333333);
-        this.castle.graphics.fillRect(100, this.castle.y - 25, 200, 8);
+        this.castle.graphics.fillRect(
+            (this.gameWidth - this.castle.width) / 2 + 50, 
+            this.castle.y - 25, 
+            this.castle.width - 100, 8
+        );
         
         // 绘制新的血量条
         const healthPercent = this.gameState.castleHealth / this.gameState.maxCastleHealth;
@@ -613,7 +628,11 @@ class GameScene extends Phaser.Scene {
                            healthPercent > 0.25 ? 0xFFFF00 : 0xFF0000;
         
         this.castle.graphics.fillStyle(healthColor);
-        this.castle.graphics.fillRect(100, this.castle.y - 25, 200 * healthPercent, 8);
+        this.castle.graphics.fillRect(
+            (this.gameWidth - this.castle.width) / 2 + 50, 
+            this.castle.y - 25, 
+            (this.castle.width - 100) * healthPercent, 8
+        );
         
         // 更新血量文本颜色
         if (this.uiElements.healthText) {
@@ -624,8 +643,17 @@ class GameScene extends Phaser.Scene {
     updateUI() {
         this.uiElements.scoreText.setText(`Score: ${this.gameState.score}`);
         this.uiElements.levelText.setText(`Level: ${this.gameState.level}`);
-        this.uiElements.marbleText.setText(`Marbles: ${this.gameState.marbleCount}`);
         this.uiElements.healthText.setText(`HP: ${this.gameState.castleHealth}/${this.gameState.maxCastleHealth}`);
+        
+        // 更新选中的佣兵类型显示
+        const typeNames = {
+            archer: '弓箭手',
+            tank: '重装兵',
+            assassin: '刺客',
+            healer: '治疗师',
+            mage: '法师'
+        };
+        this.uiElements.selectedText.setText(`选中: ${typeNames[this.gameState.selectedSoldierType]}`);
     }
 
     startGameLoops() {
@@ -652,28 +680,29 @@ class GameScene extends Phaser.Scene {
         // 更新 Matter.js 物理
         Engine.update(this.engine, 1000 / 60);
         
-        // 同步 Phaser 精灵位置
-        this.marbles.forEach(marble => {
-            if (marble.body && marble.sprite) {
-                marble.sprite.x = marble.body.position.x;
-                marble.sprite.y = marble.body.position.y;
-                marble.sprite.rotation = marble.body.angle;
-            }
+        // 更新佣兵
+        this.soldiers = this.soldiers.filter(soldier => {
+            soldier.update(16);
+            return soldier.state !== 'dead';
         });
         
-        this.enemies.forEach(enemy => {
-            if (enemy.body && enemy.sprite) {
-                enemy.sprite.x = enemy.body.position.x;
-                enemy.sprite.y = enemy.body.position.y;
-                enemy.sprite.rotation = enemy.body.angle;
-            }
+        // 更新敌人
+        this.enemies = this.enemies.filter(enemy => {
+            enemy.update(16);
+            return enemy.state !== 'dead';
         });
         
-        // 清理超出边界的弹珠
-        this.marbles = this.marbles.filter(marble => {
-            if (marble.body.position.y > 750 || marble.body.position.x < -50 || marble.body.position.x > 450) {
-                World.remove(this.world, marble.body);
-                marble.sprite.destroy();
+        // 清理超出边界的对象
+        this.cleanupOutOfBounds();
+    }
+
+    cleanupOutOfBounds() {
+        // 清理超出边界的佣兵
+        this.soldiers = this.soldiers.filter(soldier => {
+            if (soldier.y > this.gameHeight + 50 || 
+                soldier.x < -50 || 
+                soldier.x > this.gameWidth + 50) {
+                soldier.destroy();
                 return false;
             }
             return true;
@@ -688,14 +717,14 @@ class GameScene extends Phaser.Scene {
         this.physicsUpdateEvent.remove();
         
         // 显示游戏结束画面
-        const gameOverText = this.add.text(200, 350, 'GAME OVER', {
+        const gameOverText = this.add.text(this.gameWidth/2, this.gameHeight/2, 'GAME OVER', {
             fontSize: '48px',
             fill: '#FF0000',
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
         
-        const finalScoreText = this.add.text(200, 420, `Final Score: ${this.gameState.score}`, {
+        const finalScoreText = this.add.text(this.gameWidth/2, this.gameHeight/2 + 70, `Final Score: ${this.gameState.score}`, {
             fontSize: '24px',
             fill: '#FFFFFF',
             stroke: '#000000',
@@ -703,7 +732,7 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // 重新开始按钮
-        const restartButton = this.add.text(200, 480, 'TAP TO RESTART', {
+        const restartButton = this.add.text(this.gameWidth/2, this.gameHeight/2 + 140, 'TAP TO RESTART', {
             fontSize: '20px',
             fill: '#00FF00',
             stroke: '#000000',
@@ -719,7 +748,7 @@ class GameScene extends Phaser.Scene {
         // 游戏主循环更新
         if (!this.gameState.isGameOver) {
             // 检查升级
-            if (this.gameState.score >= this.gameState.level * 500) {
+            if (this.gameState.score >= this.gameState.level * 1000) {
                 this.levelUp();
             }
         }
@@ -727,14 +756,13 @@ class GameScene extends Phaser.Scene {
 
     levelUp() {
         this.gameState.level++;
-        this.gameState.marbleCount += 10;
         this.updateUI();
         
         // 增加难度
         this.enemySpawnEvent.delay = Math.max(1000, 3000 - (this.gameState.level * 200));
         
         // 升级特效
-        const levelUpText = this.add.text(200, 350, 'LEVEL UP!', {
+        const levelUpText = this.add.text(this.gameWidth/2, this.gameHeight/2, 'LEVEL UP!', {
             fontSize: '36px',
             fill: '#FFFF00',
             stroke: '#000000',
@@ -757,8 +785,8 @@ class GameScene extends Phaser.Scene {
 // 游戏配置
 const config = {
     type: Phaser.AUTO,
-    width: 400,
-    height: 700,
+    width: window.innerWidth * 0.9,
+    height: window.innerHeight * 0.9,
     parent: 'game',
     backgroundColor: '#1e3c72',
     physics: {
