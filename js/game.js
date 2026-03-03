@@ -107,6 +107,10 @@ class GameScene extends Phaser.Scene {
     createGameWorld() {
         console.log('Creating game world...');
         
+        // 添加测试矩形确保渲染正常
+        const testRect = this.add.rectangle(this.gameWidth / 2, this.gameHeight / 2, 100, 100, 0xFF0000);
+        console.log('Test rectangle added at center');
+        
         // 创建边界墙壁
         this.createWalls();
         console.log('Walls created');
@@ -169,6 +173,8 @@ class GameScene extends Phaser.Scene {
         const portalX = this.gameWidth / 2;
         const portalY = 80;
         
+        console.log(`Creating portal at (${portalX}, ${portalY})`);
+        
         // 创建传送门视觉效果
         const portalGraphics = this.add.graphics();
         
@@ -194,6 +200,7 @@ class GameScene extends Phaser.Scene {
         });
         
         this.portal = { x: portalX, y: portalY, graphics: portalGraphics };
+        console.log('Portal created successfully');
     }
 
     createCastle() {
@@ -201,6 +208,8 @@ class GameScene extends Phaser.Scene {
         const castleY = this.gameHeight - 50;
         const castleWidth = this.gameWidth * 0.8;
         const castleX = (this.gameWidth - castleWidth) / 2;
+        
+        console.log(`Creating castle at (${castleX}, ${castleY}) with width ${castleWidth}`);
         
         // 创建城墙视觉效果
         const castleGraphics = this.add.graphics();
@@ -226,12 +235,15 @@ class GameScene extends Phaser.Scene {
             height: 40,
             graphics: castleGraphics 
         };
+        console.log('Castle created successfully');
     }
 
     createKing() {
         // 国王位置（底部中央）
         const kingX = this.gameWidth / 2;
         const kingY = this.gameHeight - 120;
+        
+        console.log(`Creating king at (${kingX}, ${kingY})`);
         
         // 创建国王视觉效果（蓝色方块作为占位符）
         const kingGraphics = this.add.graphics();
@@ -254,6 +266,7 @@ class GameScene extends Phaser.Scene {
         };
         
         this.slingshotState.startPos = { x: kingX, y: kingY };
+        console.log('King created successfully');
     }
 
     createSoldierPanel() {
