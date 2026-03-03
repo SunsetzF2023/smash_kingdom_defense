@@ -832,21 +832,7 @@ const config = {
             debug: false
         }
     },
-    scene: GameScene,
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 800,
-        height: 900,
-        min: {
-            width: 400,
-            height: 600
-        },
-        max: {
-            width: 800,
-            height: 900
-        }
-    }
+    scene: GameScene
 };
 
 // 创建游戏实例
