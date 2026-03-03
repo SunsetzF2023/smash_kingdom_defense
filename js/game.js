@@ -71,9 +71,9 @@ class GameScene extends Phaser.Scene {
             loadingElement.style.display = 'none';
         }
 
-        // 使用固定尺寸
-        this.gameWidth = 500;
-        this.gameHeight = 800;
+        // 使用更大的尺寸
+        this.gameWidth = 800;
+        this.gameHeight = 900;
         
         console.log(`Game dimensions: ${this.gameWidth}x${this.gameHeight}`);
         
@@ -793,8 +793,8 @@ class GameScene extends Phaser.Scene {
 // 游戏配置
 const config = {
     type: Phaser.AUTO,
-    width: 500,
-    height: 800,
+    width: 800,
+    height: 900,
     parent: 'game',
     backgroundColor: '#000000',
     physics: {
@@ -808,15 +808,15 @@ const config = {
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 500,
-        height: 800,
+        width: 800,
+        height: 900,
         min: {
-            width: 300,
+            width: 400,
             height: 600
         },
         max: {
-            width: 500,
-            height: 800
+            width: 800,
+            height: 900
         }
     }
 };
