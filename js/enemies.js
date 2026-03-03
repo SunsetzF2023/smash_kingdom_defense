@@ -112,32 +112,49 @@ class Enemy {
     }
     
     createHealthBar() {
-        this.healthBarBg = this.scene.add.graphics();
-        this.healthBar = this.scene.add.graphics();
+        this.healthRing = this.scene.add.graphics();
         this.updateHealthBar();
     }
     
     updateHealthBar() {
-        if (!this.healthBar || !this.healthBarBg) return;
+        if (!this.healthRing) return;
         
-        const barWidth = 40;
-        const barHeight = 4;
-        const x = this.x - barWidth / 2;
-        const y = this.y - this.height / 2 - 10;
+        this.healthRing.clear();
         
-        // 背景
-        this.healthBarBg.clear();
-        this.healthBarBg.fillStyle(0x333333);
-        this.healthBarBg.fillRect(x, y, barWidth, barHeight);
-        
-        // 血量
+        // 计算血量百分比
         const healthPercent = Math.max(0, this.hp / this.maxHp);
+        
+        // 根据血量设置颜色
         const healthColor = this.hp > this.maxHp * 0.5 ? 0x00FF00 : 
                            this.hp > this.maxHp * 0.25 ? 0xFFFF00 : 0xFF0000;
         
-        this.healthBar.clear();
-        this.healthBar.fillStyle(healthColor);
-        this.healthBar.fillRect(x, y, barWidth * healthPercent, barHeight);
+        // 绘制环形血条
+        const radius = Math.max(this.width, this.height) / 2 + 8;
+        const thickness = 3;
+        const startAngle = -Math.PI / 2; // 从顶部开始
+        const endAngle = startAngle + (Math.PI * 2 * healthPercent);
+        
+        // 背景环（灰色）
+        this.healthRing.lineStyle(thickness, 0x333333, 0.8);
+        this.healthRing.beginPath();
+        this.healthRing.arc(this.x, this.y, radius, 0, Math.PI * 2);
+        this.healthRing.strokePath();
+        
+        // 血量环（彩色）
+        if (healthPercent > 0) {
+            this.healthRing.lineStyle(thickness, healthColor, 1);
+            this.healthRing.beginPath();
+            this.healthRing.arc(this.x, this.y, radius, startAngle, endAngle);
+            this.healthRing.strokePath();
+        }
+        
+        // 添加发光效果
+        if (healthPercent > 0.5) {
+            this.healthRing.lineStyle(1, healthColor, 0.3);
+            this.healthRing.beginPath();
+            this.healthRing.arc(this.x, this.y, radius + 2, startAngle, endAngle);
+            this.healthRing.strokePath();
+        }
     }
     
     update(deltaTime) {
@@ -284,8 +301,8 @@ class Enemy {
             this.poisonTimer = null;
         }
         
-        // 死亡特效
-        this.createDeathEffect();
+        // 破碎特效
+        this.createShatterEffect();
         
         // 给玩家奖励
         this.scene.gameState.score += this.reward;
@@ -298,29 +315,84 @@ class Enemy {
         if (this.sprite) {
             this.sprite.destroy();
         }
-        if (this.healthBar) {
-            this.healthBar.destroy();
-        }
-        if (this.healthBarBg) {
-            this.healthBarBg.destroy();
+        if (this.healthRing) {
+            this.healthRing.destroy();
         }
     }
     
-    createDeathEffect() {
-        const effect = this.scene.add.graphics();
-        effect.fillStyle(this.color, 0.8);
-        effect.fillCircle(this.x, this.y, Math.max(this.width, this.height));
+    createShatterEffect() {
+        // 创建破碎粒子效果
+        const particleCount = 8;
+        const particles = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (Math.PI * 2 * i) / particleCount;
+            const speed = 1.5 + Math.random() * 2;
+            const size = 2 + Math.random() * 3;
+            
+            const particle = this.scene.add.graphics();
+            particle.fillStyle(this.color, 0.8);
+            particle.fillCircle(0, 0, size);
+            
+            particle.x = this.x;
+            particle.y = this.y;
+            
+            particles.push(particle);
+            
+            // 粒子飞散动画
+            this.scene.tweens.add({
+                targets: particle,
+                x: this.x + Math.cos(angle) * speed * 15,
+                y: this.y + Math.sin(angle) * speed * 15,
+                scaleX: 0.1,
+                scaleY: 0.1,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // 中心爆炸效果
+        const explosion = this.scene.add.graphics();
+        explosion.fillStyle(this.color, 0.6);
+        explosion.fillCircle(this.x, this.y, Math.max(this.width, this.height));
         
         this.scene.tweens.add({
-            targets: effect,
-            scaleX: 2,
-            scaleY: 2,
+            targets: explosion,
+            scaleX: 2.5,
+            scaleY: 2.5,
             alpha: 0,
-            duration: 600,
+            duration: 350,
+            ease: 'Power2',
             onComplete: () => {
-                effect.destroy();
+                explosion.destroy();
             }
         });
+        
+        // 环形血条破碎效果
+        if (this.healthRing) {
+            const ringShatter = this.scene.add.graphics();
+            const radius = Math.max(this.width, this.height) / 2 + 8;
+            ringShatter.lineStyle(3, 0x333333, 0.8);
+            ringShatter.beginPath();
+            ringShatter.arc(this.x, this.y, radius, 0, Math.PI * 2);
+            ringShatter.strokePath();
+            
+            this.scene.tweens.add({
+                targets: ringShatter,
+                scaleX: 1.8,
+                scaleY: 1.8,
+                alpha: 0,
+                duration: 250,
+                ease: 'Power2',
+                onComplete: () => {
+                    ringShatter.destroy();
+                }
+            });
+        }
     }
     
     destroy() {
