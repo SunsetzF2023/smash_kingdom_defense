@@ -71,13 +71,11 @@ class GameScene extends Phaser.Scene {
             loadingElement.style.display = 'none';
         }
 
-        // 获取游戏容器尺寸
-        const container = document.getElementById('game-container');
-        this.gameWidth = container.clientWidth;
-        this.gameHeight = container.clientHeight;
+        // 使用固定尺寸
+        this.gameWidth = 500;
+        this.gameHeight = 800;
         
-        // 设置游戏画布尺寸
-        this.cameras.main.setSize(this.gameWidth, this.gameHeight);
+        console.log(`Game dimensions: ${this.gameWidth}x${this.gameHeight}`);
         
         // 初始化 Matter.js
         this.initMatterJS();
@@ -107,23 +105,37 @@ class GameScene extends Phaser.Scene {
     }
 
     createGameWorld() {
+        console.log('Creating game world...');
+        
+        // 添加测试矩形
+        const testRect = this.add.rectangle(250, 400, 100, 100, 0xFF0000);
+        console.log('Test rectangle added');
+        
         // 创建边界墙壁
         this.createWalls();
+        console.log('Walls created');
         
         // 创建传送门（顶部）
         this.createPortal();
+        console.log('Portal created');
         
         // 创建城墙（底部）
         this.createCastle();
+        console.log('Castle created');
         
         // 创建国王（发射点）
         this.createKing();
+        console.log('King created');
         
         // 创建瞄准线
         this.createAimLine();
+        console.log('Aim line created');
         
         // 创建佣兵选择面板
         this.createSoldierPanel();
+        console.log('Soldier panel created');
+        
+        console.log('Game world creation complete!');
     }
 
     createWalls() {
@@ -785,8 +797,8 @@ class GameScene extends Phaser.Scene {
 // 游戏配置
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth * 0.9,
-    height: window.innerHeight * 0.9,
+    width: 500,
+    height: 800,
     parent: 'game',
     backgroundColor: '#1e3c72',
     physics: {
