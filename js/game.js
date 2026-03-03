@@ -107,9 +107,19 @@ class GameScene extends Phaser.Scene {
     createGameWorld() {
         console.log('Creating game world...');
         
-        // 添加测试矩形确保渲染正常
-        const testRect = this.add.rectangle(this.gameWidth / 2, this.gameHeight / 2, 100, 100, 0xFF0000);
+        // 添加多个测试图形确保渲染正常
+        const testRect = this.add.rectangle(400, 450, 100, 100, 0xFF0000);
         console.log('Test rectangle added at center');
+        
+        const testCircle = this.add.circle(200, 200, 50, 0x00FF00);
+        console.log('Test circle added');
+        
+        const testText = this.add.text(400, 100, 'GAME TEST', {
+            fontSize: '32px',
+            color: '#FFFFFF',
+            backgroundColor: '#FF0000'
+        }).setOrigin(0.5);
+        console.log('Test text added');
         
         // 创建边界墙壁
         this.createWalls();
