@@ -809,7 +809,7 @@ const config = {
     width: 800,
     height: 900,
     parent: 'game',
-    backgroundColor: '#000000',
+    backgroundColor: '#1a1a2e',
     physics: {
         default: 'arcade',
         arcade: {
