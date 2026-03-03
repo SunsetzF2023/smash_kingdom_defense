@@ -1,0 +1,30 @@
+{
+  "name": "smash-kingdom-defense",
+  "version": "1.0.0",
+  "description": "基于 Phaser 3 的弹珠策略防御游戏",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx live-server --port=3000 --open=/index.html",
+    "build": "echo 'No build step required for this project'",
+    "deploy": "git push origin main"
+  },
+  "keywords": [
+    "game",
+    "phaser",
+    "defense",
+    "strategy",
+    "mobile"
+  ],
+  "author": "SunsetzF2023",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SunsetzF2023/smash_kingdom_defense.git"
+  },
+  "homepage": "https://sunsetzf2023.github.io/smash_kingdom_defense/"
+}
