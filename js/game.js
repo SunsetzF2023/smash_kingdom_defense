@@ -107,10 +107,6 @@ class GameScene extends Phaser.Scene {
     createGameWorld() {
         console.log('Creating game world...');
         
-        // 添加测试矩形
-        const testRect = this.add.rectangle(250, 400, 100, 100, 0xFF0000);
-        console.log('Test rectangle added');
-        
         // 创建边界墙壁
         this.createWalls();
         console.log('Walls created');
@@ -811,7 +807,17 @@ const config = {
     scene: GameScene,
     scale: {
         mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 500,
+        height: 800,
+        min: {
+            width: 300,
+            height: 600
+        },
+        max: {
+            width: 500,
+            height: 800
+        }
     }
 };
 
